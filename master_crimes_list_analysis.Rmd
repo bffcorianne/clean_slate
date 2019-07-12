@@ -1,0 +1,134 @@
+---
+title: "Massachusetts Crimes Master List"
+output: html_notebook
+---
+
+We have a file of all crimes from the State of Massachuestts that we need to do an initial analysis on for the [Code for Boston](https://www.codeforboston.org) Clean Slate project. We will be running summary statistics on it to see the break out of the categories versus FBI categories. Are there ways to neatly, easily, remove entire categories of crimes from further analysis?  
+
+packages for analysis
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(janitor)
+library(DataExplorer)
+
+st_options(plain.ascii = FALSE,      # This is very handy in all Rmd documents
+          style = "rmarkdown",        # This too
+          footnote = NA,             # Avoids footnotes which would clutter the results
+          subtitle.emphasis = FALSE  # This is a setting to experiment with - according to
+)                                    # the theme used, it might improve the headings'
+                                     # layout
+
+```
+
+
+```{r include=FALSE}
+ma_crimes <- 
+  read.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vRQtMFa4KZlBlXpklfT9uSE383NaRtN8C5-L1FeSS1sTxX0Ws3Xam6Ahbpuf2BSOzR1Ugc9AZGPRLlu/pub?gid=579055210&single=true&output=csv", stringsAsFactors=FALSE) %>% 
+  clean_names() %>% 
+  na_if("#N/A") %>% 
+  mutate(expungeable = replace(expungeable, expungeable != "Yes", "No"),
+         fbi_category = replace(fbi_category, fbi_category == c("synthetic Narcotics – Manufactured Narcotics which can cause true drug addiction (Demerol, Methadones)"), c("Synthetic Narcotics – Manufactured Narcotics which can cause true drug addiction (Demerol, Methadones)")),
+         fbi_category = replace(fbi_category, fbi_category == c("forgery and Counterfeiting"), c("Forgery and Counterfeiting")))
+
+```
+
+So thus far, we've read in the data, converted the headers to snake case, and replaced the `#N/A`s with proper `NA`. I may return to this decision and find another way to replace those values.
+
+But we're probably going to need to change more things. Perhaps consider:
+
+ - replace "#N/A" with `NA`  
+ - adust binary fields to either `TRUE`/`FALSE` or logit `1`/`0`.
+    - `expungible`  <= _as an aside, the variations in syntax are forcing different values. D:_
+    - `police_notification`
+    - `sorb`
+    - `sdp`
+    - `now_legal`  
+ - should all these variables remain as factors? idk, seems like not a good idea.  
+ 
+ With that said, I have some concerns / wishlists.  
+ 
+  - proper, tidy data:  
+    - section and chapter columns   
+    - uniform descriptions   
+    - confirming the categories that were used. Heard they weren't the correct ones? 
+ - double check indent
+
+```{r}
+#DataExplorer
+create_report(ma_crimes)
+
+```
+
+two-way table for % and distribution
+
+```{r}
+ma_crimes %>% 
+  tabyl(fbi_category, expungeable, sort = TRUE)
+
+summary(ma_crimes)
+glimpse(ma_crimes) 
+
+```
+
+
+
+two-way table
+```{r}
+fbi_exp <- ma_crimes %>% 
+  tabyl(fbi_category, expungeable) %>% 
+  adorn_totals(c("row", "col"))
+
+library(broom)
+install.packages("vcd")
+library(vcd)
+mosaic(fbi_exp)
+
+str(fbi_exp)
+
+?broom
+?tidy
+```
+ 
+chi-square test
+```{r}
+library(MASS)
+chisq.test(fbi_exp) %>% 
+```
+
+
+visualize `fbi_exp`
+```{r}
+
+fbi_exp %>% create_report()
+
+View(fbi_exp)
+
+ggplot(aes())
+```
+
+Felony vs Misdemeanor
+```{r}
+ma_crimes %>% group_by(penalty_type) %>% summarise(n())
+
+# fbi_fel_mis <- 
+  
+  
+  ma_crimes %>% 
+  tabyl(penalty_type, expungeable) %>% 
+  # adorn_totals(c("row", "col")) %>% 
+    adorn_title() %>% create_report
+  
+  
+  ma_crimes %>% adorn_crosstab()
+
+
+```
+
+```{r}
+library(SmartEDA)
+
+ExpData(data = ma_crimes, type = 2)
+
+ExpNumStat(data = ma_crimes, by = "G")
+```
+
