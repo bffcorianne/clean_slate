@@ -1,6 +1,6 @@
 ---
 title: "Massachusetts Crimes Master List"
-output: html_notebook
+# output: html_notebook
 output: rmarkdown::github_document
 ---
 
